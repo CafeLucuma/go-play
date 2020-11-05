@@ -6,7 +6,7 @@ import (
 )
 
 func GetUser(userId uint64) (*domain.User, *utils.ApiError) {
-	user, apiError := domain.GetUser(userId)
+	user, apiError := domain.UserDao.GetUser(userId)
 
 	if apiError != nil {
 		return nil, apiError
