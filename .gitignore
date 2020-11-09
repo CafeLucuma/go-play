@@ -17,3 +17,6 @@
 #vscode
 .metals
 .vscode
+
+#env
+.env

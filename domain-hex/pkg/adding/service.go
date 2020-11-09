@@ -2,7 +2,7 @@ package adding
 
 // Service provides beer adding operations.
 type Service interface {
-	AddPlate(...Plate) error
+	AddPlate(Plate) error
 }
 
 // Repository provides access to beer repository.
@@ -19,9 +19,9 @@ func NewService(r Repository) Service {
 	return &service{pR: r}
 }
 
-func (s *service) AddPlate(p ...Plate) error {
-	for _, plate := range p {
-		_ = s.pR.AddPlate(plate)
+func (s *service) AddPlate(p Plate) error {
+	if err := s.pR.AddPlate(p); err != nil {
+		return err
 	}
 
 	return nil

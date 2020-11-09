@@ -7,13 +7,22 @@ import (
 	"github.com/CafeLucuma/go-play/domain-hex/pkg/adding"
 	"github.com/CafeLucuma/go-play/domain-hex/pkg/http/rest"
 	"github.com/CafeLucuma/go-play/domain-hex/pkg/listing"
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/storage/json"
+	"github.com/CafeLucuma/go-play/domain-hex/pkg/storage/postgres"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	//loading environment variables
+	godotenv.Load()
+
 	server := rest.NewServer()
 
-	storage, _ := json.NewStorage()
+	storage, err := postgres.NewStorage()
+	if err != nil {
+		panic(err)
+	}
+	defer storage.CloseDB()
 
 	adding := adding.NewService(storage)
 	listing := listing.NewService(storage)
