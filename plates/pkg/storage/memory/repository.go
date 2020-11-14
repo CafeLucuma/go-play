@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/adding"
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/listing"
+	"github.com/CafeLucuma/go-play/plates/pkg/adding"
+	"github.com/CafeLucuma/go-play/plates/pkg/listing"
 )
 
 var (

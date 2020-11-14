@@ -1,4 +1,4 @@
-package rest
+package response
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/CafeLucuma/go-play/utils/logging"
 )
 
 type Response struct {
@@ -14,7 +16,19 @@ type Response struct {
 	Headers    http.Header
 }
 
-func NewResponse(s int, b interface{}, h http.Header) Response {
+type GenericBody struct {
+	Code    int    `json:"code,ommitempty"`
+	Message string `json:"message"`
+}
+
+func NewGenericBody(code int, message string) GenericBody {
+	return GenericBody{
+		Code:    code,
+		Message: message,
+	}
+}
+
+func New(s int, b interface{}, h http.Header) Response {
 	return Response{
 		StatusCode: s,
 		Body:       b,
@@ -27,7 +41,7 @@ func (r *Response) encodeBodyToJson() error {
 	encodedBody := new(bytes.Buffer)
 	encoder := json.NewEncoder(encodedBody)
 	if err := encoder.Encode(r.Body); err != nil {
-		log.Printf("Cant encode '%+v' to JSON", r.Body)
+		log.Printf("Cant encode '%s' to JSON", r.Body)
 		return err
 	}
 
@@ -39,7 +53,7 @@ func (r *Response) encodeBodyToJson() error {
 func (r *Response) RespondJSON(w http.ResponseWriter) error {
 
 	if err := r.encodeBodyToJson(); err != nil {
-		log.Printf("Error encoding json in RespondJson: %s", err.Error())
+		logging.Error.Printf("Error encoding json in RespondJson: %s", err)
 		return err
 	}
 

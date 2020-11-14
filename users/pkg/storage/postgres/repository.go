@@ -9,7 +9,7 @@ import (
 
 	"github.com/CafeLucuma/go-play/users/pkg/adding"
 	"github.com/CafeLucuma/go-play/users/pkg/authentication"
-	"github.com/CafeLucuma/go-play/users/pkg/logging"
+	"github.com/CafeLucuma/go-play/utils/logging"
 
 	_ "github.com/lib/pq"
 )
@@ -59,7 +59,7 @@ func (s *Storage) GetUser(email string) (*authentication.User, error) {
 	var user authentication.User
 	userRow := s.db.QueryRow(SELECT_USER_BY_EMAIL, email)
 	if err := userRow.Scan(&user.ID, &user.Password); err != nil {
-		logging.Error.Printf("Error obtaining user with user email %v", email)
+		logging.Error.Printf("Error obtaining user with user email %v: %s", email, err)
 		return nil, err
 	}
 
@@ -79,10 +79,10 @@ func (s *Storage) AddUser(u adding.User) error {
 		CreatedOn: time.Now(),
 	}
 
-	_, insertErr := s.db.Exec(INSERT_USER, newUser.Name, newUser.LastName, newUser.Email, newUser.Password, newUser.IsAdmin, newUser.CreatedOn)
-	if insertErr != nil {
-		logging.Error.Printf("Cant insert new user to database: ", insertErr.Error())
-		return insertErr
+	_, err := s.db.Exec(INSERT_USER, newUser.Name, newUser.LastName, newUser.Email, newUser.Password, newUser.IsAdmin, newUser.CreatedOn)
+	if err != nil {
+		logging.Error.Printf("Cant insert new user to database: %s", err)
+		return err
 	}
 
 	return nil

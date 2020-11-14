@@ -3,7 +3,7 @@ package authentication
 import (
 	"time"
 
-	"github.com/CafeLucuma/go-play/users/pkg/logging"
+	"github.com/CafeLucuma/go-play/utils/logging"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -40,10 +40,10 @@ func (s *service) AuthenticateUser(email, pswd string) (*Token, error) {
 	}
 
 	userClaims := NewUserClaim(user.ID, email, jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(time.Second * 5).Unix(),
+		ExpiresAt: time.Now().Add(time.Hour * 5).Unix(),
 	})
 
-	token, tErr := generateUserToken(userClaims)
+	token, tErr := generateUserToken(userClaims, []byte("my-secret"))
 	if tErr != nil {
 		logging.Error.Printf("Error creating user token: %s", tErr.Error())
 		return nil, tErr

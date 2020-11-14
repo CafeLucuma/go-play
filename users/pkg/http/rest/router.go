@@ -1,13 +1,16 @@
 package rest
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
 	"github.com/CafeLucuma/go-play/users/pkg/adding"
 	"github.com/CafeLucuma/go-play/users/pkg/authentication"
-	"github.com/CafeLucuma/go-play/users/pkg/logging"
+	response "github.com/CafeLucuma/go-play/utils/http-response"
+	"github.com/CafeLucuma/go-play/utils/logging"
 	"github.com/julienschmidt/httprouter"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type server struct {
@@ -40,22 +43,28 @@ func handleAddUser(aS adding.Service) func(w http.ResponseWriter, r *http.Reques
 
 		var newUser adding.User
 		if err := decoder.Decode(&newUser); err != nil {
-			logging.Error.Printf("Error decoding user: %s", err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			logging.Error.Printf("Error decoding user: %s", err)
+			r := response.New(http.StatusBadRequest, response.NewGenericBody(2, "bad json"), nil)
+			r.RespondJSON(w)
+			return
+		}
+
+		if err := newUser.Validate(); err != nil {
+			logging.Error.Printf("Invalid user credentials: %s", err)
+			r := response.New(http.StatusBadRequest, response.NewGenericBody(1, err.Error()), nil)
+			r.RespondJSON(w)
 			return
 		}
 
 		if err := aS.AddUser(newUser); err != nil {
-			logging.Error.Printf("Error adding user: %s", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logging.Error.Printf("Error adding user: %s", err)
+			r := response.New(http.StatusInternalServerError, response.NewGenericBody(1, "internal error"), nil)
+			r.RespondJSON(w)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode("Added new user"); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		resp := response.New(http.StatusCreated, response.NewGenericBody(http.StatusCreated, "user added"), nil)
+		resp.RespondJSON(w)
 	}
 }
 
@@ -69,51 +78,39 @@ func handleAuthenticateUser(aS authentication.Service) httprouter.Handle {
 		defer r.Body.Close()
 
 		if err := decoder.Decode(&credentials); err != nil {
-			logging.Error.Println("Error decoding credentials: %s", err.Error())
+			logging.Error.Printf("Error decoding credentials: %s", err.Error())
 
-			r := NewUserRoleError(1, "internal error")
-			r.RespondJSON(w, http.StatusInternalServerError)
+			r := response.New(http.StatusInternalServerError, response.NewGenericBody(1, "internal error"), nil)
+			r.RespondJSON(w)
 			return
 		}
 
-		if credentials.Email == nil {
-			logging.Info.Println("missing field Email")
-			r := NewUserRoleError(3, "missing field 'Email'")
-			r.RespondJSON(w, http.StatusBadRequest)
-			return
-		}
-
-		if credentials.Password == nil {
-			logging.Info.Println("missing field Password")
-			r := NewUserRoleError(3, "missing field 'Password'")
-			r.RespondJSON(w, http.StatusBadRequest)
-			return
-		}
-
-		if *credentials.Email == "" {
-			logging.Info.Println("credentials email empty")
-			r := NewUserRoleError(3, "field 'Email' empty")
-			r.RespondJSON(w, http.StatusBadRequest)
-			return
-		}
-
-		if *credentials.Password == "" {
-			logging.Info.Println("credentials password empty")
-			r := NewUserRoleError(3, "field 'Password' empty")
-			r.RespondJSON(w, http.StatusBadRequest)
+		if err := credentials.Validate(); err != nil {
+			logging.Error.Printf("error validating credentials: %s", err)
+			r := response.New(http.StatusBadRequest, response.NewGenericBody(3, err.Error()), nil)
+			r.RespondJSON(w)
 			return
 		}
 
 		token, err := aS.AuthenticateUser(*credentials.Email, *credentials.Password)
 		if err != nil {
-			logging.Error.Printf("Error authenticating user: %s", err.Error())
+			logging.Error.Printf("Error authenticating user: %s", err)
 
-			e := NewUserRoleError(5, "unauthorized user")
-			e.RespondJSON(w, http.StatusUnauthorized)
+			switch err {
+			case sql.ErrNoRows:
+				e := response.New(http.StatusUnauthorized, response.NewGenericBody(5, "user not found"), nil)
+				e.RespondJSON(w)
+			case bcrypt.ErrMismatchedHashAndPassword:
+				e := response.New(http.StatusUnauthorized, response.NewGenericBody(5, "incorrect password"), nil)
+				e.RespondJSON(w)
+			default:
+				e := response.New(http.StatusUnauthorized, response.NewGenericBody(5, "unauthorized user"), nil)
+				e.RespondJSON(w)
+			}
 			return
 		}
 
-		resp := NewResponse(http.StatusOK, token, nil)
+		resp := response.New(http.StatusOK, token, nil)
 		resp.RespondJSON(w)
 	}
 }

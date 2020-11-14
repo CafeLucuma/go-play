@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/adding"
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/http/rest"
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/listing"
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/storage/postgres"
+	"github.com/CafeLucuma/go-play/plates/pkg/adding"
+	"github.com/CafeLucuma/go-play/plates/pkg/http/rest"
+	"github.com/CafeLucuma/go-play/plates/pkg/listing"
+	"github.com/CafeLucuma/go-play/plates/pkg/storage/postgres"
 	"github.com/joho/godotenv"
 )
 
@@ -27,5 +27,5 @@ func main() {
 	adding := adding.NewService(storage)
 	listing := listing.NewService(storage)
 
-	log.Fatal(http.ListenAndServe(":8080", server.GetHandler(adding, listing)))
+	log.Fatal(http.ListenAndServe(":8081", server.GetHandler(adding, listing)))
 }

@@ -7,8 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/adding"
-	"github.com/CafeLucuma/go-play/domain-hex/pkg/listing"
+	"github.com/CafeLucuma/go-play/plates/pkg/adding"
+	"github.com/CafeLucuma/go-play/plates/pkg/listing"
+	"github.com/CafeLucuma/go-play/utils/logging"
 	_ "github.com/lib/pq"
 )
 
@@ -26,19 +27,19 @@ func NewStorage() (*Storage, error) {
 
 	dbURL, ok := os.LookupEnv("DATABASE_URL")
 	if !ok {
-		log.Println("Cant load databse url from environment")
+		logging.Error.Printf("Cant load env 'DATABASE_URL'")
 		return nil, errors.New("Cant load databse url from environment")
 	}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal(err)
+		logging.Error.Printf("cant open database connection: %s", err)
 		return nil, err
 	}
 	storage.db = db
 
 	if err := storage.db.Ping(); err != nil {
-		log.Fatal(err)
+		logging.Error.Printf("ping to database failed: %s", err)
 		return nil, err
 	}
 
@@ -46,7 +47,7 @@ func NewStorage() (*Storage, error) {
 }
 
 func (s *Storage) CloseDB() {
-	log.Println("Closing db...")
+	logging.Info.Printf("closing db")
 	log.Fatal(s.db.Close())
 }
 
@@ -63,7 +64,7 @@ func (s *Storage) AddPlate(p adding.Plate) error {
 	sqlStatement := "INSERT INTO PLATES (name, description, plate_type, created_on) VALUES ($1, $2, $3, $4)"
 	_, err := s.db.Exec(sqlStatement, newPlate.Name, newPlate.Description, newPlate.Type, newPlate.CreatedAt)
 	if err != nil {
-		log.Println("Cant insert new plate to database")
+		logging.Error.Printf("Cant insert new plate to database: %s", err)
 		return err
 	}
 
@@ -76,7 +77,7 @@ func (s *Storage) GetPlates() ([]listing.Plate, error) {
 
 	plateRows, err := s.db.Query(sqlStatement)
 	if err != nil {
-		log.Println("Cant get plates from db")
+		logging.Error.Printf("Cant get plates from db: %s", err)
 		return nil, err
 	}
 
@@ -86,7 +87,7 @@ func (s *Storage) GetPlates() ([]listing.Plate, error) {
 		var plate listing.Plate
 
 		if err := plateRows.Scan(&plate.ID, &plate.Name, &plate.Description, &plate.Type, &plate.CreatedAt); err != nil {
-			log.Println("Cant parse row to plate")
+			logging.Error.Printf("Cant parse row to plate: %s", err)
 			return nil, err
 		}
 
@@ -104,7 +105,7 @@ func (s *Storage) GetPlate(ID int) (listing.Plate, error) {
 
 	var plate listing.Plate
 	if err := plateRow.Scan(&plate.ID, &plate.Name, &plate.Description, &plate.Type, &plate.CreatedAt); err != nil {
-		log.Println("Cant parse row to plate")
+		logging.Error.Printf("Cant parse row to plate: %s", err)
 		return listing.Plate{}, err
 	}
 
